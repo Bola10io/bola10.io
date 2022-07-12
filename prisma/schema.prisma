@@ -9,3 +9,279 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Permissions {
+  can_buy_league_ticket
+  can_create_league
+  can_create_oficial_league
+}
+
+enum DurationTypes {
+  long
+  short
+}
+
+enum PrizeTypes {
+  fixed
+  variable
+}
+
+/// Modelo do usuário
+model User {
+  /// Id do usuário
+  id             String         @id @default(cuid())
+  /// Email do usuário
+  email          String         @unique
+  /// Nickname do usuário
+  nickname       String         @unique
+  /// Nome do usuário (salvo somente no campo)
+  name           String
+  /// Nome do usuário (que vai aparecer para os outros)
+  displayName    String
+  /// Número de telefone do usuário
+  phone          String
+  /// Linguagem do usuário
+  language       String
+  /// Chave pix do usuário (necessário para pagamentos de premiação)
+  pixKey         String?
+  /// Id do stripe do usuário (caso ele pague com cartão de crédito)
+  stripeId       String?        @unique
+  /// Id da inscrição do usuário (caso tenhamos planos pagos)
+  subscriptionId String?        @unique
+  /// Horário do último login do usuário
+  lastLogin      DateTime       @default(now())
+  /// Permissões do usuário
+  permissions    Permissions[]
+  /// Data de criação do usuário
+  createdAt      DateTime       @default(now())
+  /// Data da última atualização do usuário
+  updatedAt      DateTime       @default(now()) @updatedAt
+  tokens         Token[]
+  payments       Payment[]
+  leagueTickets  LeagueTicket[]
+}
+
+/// Modelo do token
+model Token {
+  /// O token que vamos usar para validar a sessão
+  token     String   @id
+  /// Id do usuário que tem esse token
+  userId    String
+  /// Data de criação do token
+  createdAt DateTime @default(now())
+  /// Data de expiração do token
+  expiresAt DateTime @default(dbgenerated("NOW() + interval '1 day'"))
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model League {
+  /// Id da liga
+  id              String         @id @default(cuid())
+  /// Nome da liga
+  name            String
+  /// Descrição da liga
+  description     String
+  /// Tipo de duração da liga (longa ou curta)
+  durationType    DurationTypes
+  /// Tipo de premiação da liga (variavél ou fixa)
+  prizeType       PrizeTypes
+  /// Qual a % de lucro que vamos ter nessa liga (em caso de premiação variável)
+  juice           Int?
+  /// Premiação da liga (em centavos)
+  prize           Int
+  /// Taxa de inscrição da liga (em centavos)
+  subscriptionFee Int
+  /// Id do usuário que criou a liga
+  ownerId         String
+  /// Data de criação da liga
+  createdAt       DateTime       @default(now())
+  /// Data da última atualização da liga
+  updatedAt       DateTime       @default(now()) @updatedAt
+  /// Data que a liga finalizou
+  endedAt         DateTime?
+  leaguePrizes    LeaguePrize[]
+  leagueTickets   LeagueTicket[]
+  rounds          Round[]
+}
+
+model LeaguePrize {
+  /// Chave primária da tabela LeaguePrizes
+  id         String @id @default(cuid())
+  /// Id da liga que estamos anotando a premiação
+  leagueId   String
+  /// Posição do ranking
+  position   Int
+  /// Percentual da premiação total da liga que essa posição vai pegar
+  percentage Int
+  league     League @relation(fields: [leagueId], references: [id])
+}
+
+// Tipos de pagamento
+model PaymentType {
+  /// Id do tipo de pagamento
+  id        Int       @id @default(autoincrement())
+  /// Nome do tipo de pagamento
+  name      String
+  /// Taxa variável do tipo de pagamento
+  fee       Int
+  /// Taxa fixa do tipo de pagamento
+  flatFee   Int
+  /// Data de criação do tipo de pagamento
+  createdAt DateTime  @default(now())
+  /// Data da última atualização do tipo de pagamento
+  updatedAt DateTime  @default(now()) @updatedAt
+  payments  Payment[]
+}
+
+model Payment {
+  /// Id único do pagamento
+  id              String   @id @default(cuid())
+  /// Id do usuário que fez o pagamento
+  userId          String
+  /// Id do tipo de pagamento
+  paymentTypeId   Int
+  /// Valor bruto do pagamento
+  grossValue      Int
+  /// Valor liquido do pagamento (em R$)
+  netValue        Int
+  /// Taxa que pagamos nesse pagamento
+  fee             Int
+  /// Moeda em que o pagamento foi feito
+  currency        String
+  /// Id do pagamento no stripe
+  stripePaymentId String?
+  /// Data de criação do pagamento
+  createdAt       DateTime @default(now())
+
+  user         User           @relation(fields: [userId], references: [id])
+  paymentType  PaymentType    @relation(fields: [paymentTypeId], references: [id])
+  LeagueTicket LeagueTicket[]
+}
+
+model LeagueTicket {
+  /// Id do ticket da liga
+  id        String   @id @default(cuid())
+  /// Id do usuário dono do ticket
+  userId    String
+  /// Id da liga que o ticket pertence
+  leagueId  String
+  /// Id do pagamento associado ao ticket
+  paymentId String?
+  /// Pontuação do ticket
+  points    Int
+  /// Posição do ticket
+  position  Int
+  /// Premiação do ticket
+  prize     Int
+  /// Data de criação do ticket
+  createdAt DateTime @default(now())
+  /// Data da última atualização do ticket
+  updatedAt DateTime @default(now()) @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  league  League   @relation(fields: [leagueId], references: [id])
+  payment Payment? @relation(fields: [paymentId], references: [id])
+}
+
+model Round {
+  // Id da rodada
+  id                  String   @id @default(cuid())
+  /// Nome da rodada
+  name                String
+  /// Id da liga
+  leagueId            String
+  /// Número de jogos master (jogos que o usuário terá a pontuação duplicada)
+  numberOfMasterGames Int
+  /// Data de criação da rodada
+  createdAt           DateTime @default(now())
+  /// Data da última atualização da rodada
+  updatedAt           DateTime @default(now()) @updatedAt
+
+  league     League      @relation(fields: [leagueId], references: [id])
+  roundGames RoundGame[]
+}
+
+model Team {
+  /// Id do time
+  id              Int    @id @default(autoincrement())
+  /// Id do time na API
+  apiId           Int
+  /// Nome da API que usamos esse time
+  apiName         String
+  /// Nome do time
+  name            String
+  /// Nome para url
+  nameForUrl      String
+  /// URL da imagem do time
+  imageUrl        String
+  gamesAsHomeTeam Game[] @relation(name: "GameHome")
+  gamesAsAwayTeam Game[] @relation(name: "GameAway")
+}
+
+model Competition {
+  /// Id da competição
+  id         Int    @id @default(autoincrement())
+  /// Id da competição na API
+  apiId      Int
+  /// Nome da API que usamos essa competição
+  apiName    String
+  /// Nome da competição
+  name       String
+  /// Nome para url
+  nameForUrl String
+  /// URL da imagem da competição
+  imageUrl   String
+}
+
+model Game {
+  /// Id do jogo
+  id         String @id @default(cuid())
+  /// Id do jogo na API
+  apiId      String
+  /// Id do time da casa
+  homeTeamId Int
+  /// Id do time visitante
+  awayTeamId Int
+
+  homeTeam   Team        @relation(name: "GameHome", fields: [homeTeamId], references: [id])
+  awayTeam   Team        @relation(name: "GameAway", fields: [awayTeamId], references: [id])
+  roundGames RoundGame[]
+}
+
+model RoundGame {
+  /// Id do jogo da rodada
+  id      Int    @id @default(autoincrement())
+  /// Id da rodada
+  roundId String
+  /// id do jogo
+  gameId  String
+
+
+  round Round @relation(fields: [roundId], references: [id])
+  game  Game  @relation(fields: [gameId], references: [id])
+}
+
+model Guesses {
+  /// Id do palpite
+  id          Int       @id @default(autoincrement())
+  /// Id do usuário que deu o palpite
+  userId      String
+  /// Id do jogo da rodada
+  roundGameId Int
+  /// Placar do time da casa do palpite
+  homeScore   Int
+  /// Placar do time visitante do palpite
+  awayScore   Int
+  /// Se o palpite é master ou não (pontos duplicados)
+  isMaster    Boolean
+  /// Pontuação "crua" do palpite (sem duplicar)
+  rawPoints   Int
+  /// Pontuação do palpite
+  points      Int
+  /// Data de criação do palpite
+  createdAt   DateTime  @default(now())
+  /// Data da última atualização do palpite
+  updatedAt   DateTime  @default(now()) @updatedAt
+  /// Data de quando o palpite foi validado
+  validatedAt DateTime?
+}
