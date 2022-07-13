@@ -34,6 +34,8 @@ model User {
   email          String         @unique
   /// Nickname do usuário
   nickname       String         @unique
+  /// Senha do usuário
+  password       String
   /// Nome do usuário (salvo somente no campo)
   name           String
   /// Nome do usuário (que vai aparecer para os outros)
