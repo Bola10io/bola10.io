@@ -37,13 +37,13 @@ model User {
   /// Senha do usuário
   password       String
   /// Nome do usuário (salvo somente no campo)
-  name           String
+  name           String?
   /// Nome do usuário (que vai aparecer para os outros)
-  displayName    String
+  displayName    String?
   /// Número de telefone do usuário
-  phone          String
+  phone          String?
   /// Linguagem do usuário
-  language       String
+  language       String?
   /// Chave pix do usuário (necessário para pagamentos de premiação)
   pixKey         String?
   /// Id do stripe do usuário (caso ele pague com cartão de crédito)
