@@ -16,6 +16,15 @@ interface SignUpRequest extends NextApiRequest {
 const signUp = async (req: SignUpRequest, res: NextApiResponse) => {
   const { email, password, nickname } = req.body;
 
+  // verificar se as informações do body foram enviadas na request
+  if (!email) {
+    return res.status(422).json({ message: "Email not found on request body"})
+  } else if (!password) {
+    return res.status(422).json({ message: "Password not found on request body"})
+  } else if (!nickname) {
+    return res.status(422).json({ message: "Nickname not found on request body"})
+  }
+
   // verificar se já existe um usuário com esse e-mail
   const userWithSameEmail = await prismaClient.user.findFirst({
     where: {
@@ -67,7 +76,6 @@ const signUp = async (req: SignUpRequest, res: NextApiResponse) => {
     }
   )
 
-  // falta refresh token. Entender o que é isso e como fazer.
 
   return res.status(201).json({token, user})
 };
