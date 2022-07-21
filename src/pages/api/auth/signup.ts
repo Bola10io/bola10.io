@@ -3,6 +3,8 @@ import { genSaltSync, hashSync } from "bcryptjs";
 import { sign } from "jsonwebtoken"
 
 import { NextApiRequest, NextApiResponse } from "next";
+import { User } from "@prisma/client";
+import { textSpanContainsTextSpan } from "typescript";
 
 interface SignUpRequest extends NextApiRequest {
   body: {
@@ -11,6 +13,7 @@ interface SignUpRequest extends NextApiRequest {
     nickname: string;
   }
 }
+
 
 // post API Route for Login on Bola10.io
 const signUp = async (req: SignUpRequest, res: NextApiResponse) => {
@@ -80,4 +83,4 @@ const signUp = async (req: SignUpRequest, res: NextApiResponse) => {
   return res.status(201).json({token, user})
 };
 
-export default signUp;
+export default signUp

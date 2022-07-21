@@ -3,6 +3,29 @@ import http, { IncomingMessage, ServerResponse } from "http";
 import { apiResolver }  from "next/dist/server/api-utils/node";
 import signUp from "./signUp";
 import { testHelper } from "../../../lib/testHelper"; //aqui estão os mocks de dados
+import jsonwebtoken, { sign } from "jsonwebtoken";
+import prismaClient from "../../../prisma";
+import { uuid as v4 } from "uuidv4"
+
+
+
+const returnedUserFromPrisma = {
+        id: v4(),
+        email: "bola10useremail@gmail.com",
+        password: "123456",
+        nickname: "bolinha",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastLogin: new Date(),
+        language: null,
+        displayName: null,
+        name: null,
+        permissions: [],
+        phone: null,
+        pixKey: null,
+        stripeId: null,
+        subscriptionId: null
+}
 
 describe("Sign Up API Routes tests", () => {
 
@@ -27,8 +50,6 @@ describe("Sign Up API Routes tests", () => {
     afterAll(() => {
         server.close();
     });
-    
-    // talvez apagar o usuário do prisma após cada teste
 
     it("should be able to create a new user", async () => {
         // pegar o mock dos dados do usuário
@@ -144,4 +165,41 @@ describe("Sign Up API Routes tests", () => {
             expect(signUpAttempt.status).toBe(422)
             expect(signUpAttempt.body).toEqual({ message:"Nickname not found on request body"})
     })
+
+
+    it("shold call jsonwebtoken sign function", async () => {
+        const signUpUser = {
+            email: "calljwtsigntestgmail.com",
+            password: "123456",
+            nickname: "bolinha3"
+        };
+
+        //mockar a função sign do jsonwebtoken
+        jest.spyOn(jsonwebtoken, "sign")
+              
+        // criar user na rota signup
+        const result = await request.agent(server)
+            .post("/api/auth/signUp")
+            .send(signUpUser)
+        // testar
+        expect(sign).toHaveBeenCalledTimes(1)
+    })
+
+
+    it("shold call prisma.create", async () => {
+        const signUpUser2 = {
+            email: "bola10useremail2@gmail.com",
+            password: "123456",
+            nickname: "bolinhaa"
+        };
+
+        jest.spyOn(prismaClient.user, "create").mockResolvedValue(returnedUserFromPrisma)
+        // criar user na rota signup
+        const result = await request.agent(server)
+            .post("/api/auth/signUp")
+            .send(signUpUser2)
+
+        expect(prismaClient.user.create).toHaveBeenCalledTimes(1)
+    })
+    
 })
