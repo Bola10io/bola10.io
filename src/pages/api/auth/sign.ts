@@ -5,7 +5,7 @@ import { sign as signJWT } from "jsonwebtoken"
 
 interface SignRequest extends NextApiRequest {
     body: {
-        email: string;
+        login: string;
         password: string;
     }
 }
@@ -13,11 +13,11 @@ interface SignRequest extends NextApiRequest {
 
 const sign = async (req: SignRequest, res: NextApiResponse) => {
     if (req.method === "POST") {
-        const { email, password } = req.body;
+        const { login, password } = req.body;
 
          // verificar se o email e o password foram enviados
-        if (!email) {
-            return res.status(422).json({ message: "Email not found on request body"})
+        if (!login) {
+            return res.status(422).json({ message: "Login not found on request body"})
           } else if (!password) {
             return res.status(422).json({ message: "Password not found on request body"})
         }
@@ -25,7 +25,10 @@ const sign = async (req: SignRequest, res: NextApiResponse) => {
         // buscar user no banco
         const user = await prismaClient.user.findFirst({
             where: {
-                email: email
+                OR: {
+                    email: login,
+                    nickname: login,
+                }
             }
         })
 

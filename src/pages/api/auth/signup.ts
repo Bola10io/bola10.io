@@ -85,7 +85,7 @@ const signup = async (req: SignUpRequest, res: NextApiResponse) => {
   })
 
 
-  return res.status(201).json({token, user, message: "sucess created user"})
+  return res.status(201).json({ token, user, message: "User created successfully" })
 };
 
 export default signup

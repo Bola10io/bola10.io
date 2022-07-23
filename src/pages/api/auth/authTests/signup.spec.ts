@@ -71,7 +71,7 @@ describe("Sign Up API Routes tests", () => {
 
                 expect(res.status).toBe(201)
                 expect(responseBody).toHaveProperty("user")
-                expect(responseBody.message).toEqual("sucess created user")
+                expect(responseBody.message).toEqual("User created successfully")
             })
 
     })

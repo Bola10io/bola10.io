@@ -78,7 +78,7 @@
                 ]
             }
         ],
-        "prettier/prettier": "error"
+        "prettier/prettier": ["error", {}, { "usePrettierrc": true }] // Includes .prettierrc.js rules
     },
     "settings": {
         "import/resolver": {

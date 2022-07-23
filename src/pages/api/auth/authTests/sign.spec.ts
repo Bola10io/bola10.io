@@ -10,7 +10,7 @@ import prismaClient from "../../../../prisma";
 import signup from "../signup";
 
 const signUser = {
-    email: "userSignTests@gmail.com",
+    login: "userSignTests@gmail.com",
     password: "userSignPassword",
 };
 
@@ -76,14 +76,14 @@ describe("Tests of sign API Route", () => {
         afterEach(async () => {
             const user = await prismaClient.user.findFirst({
                 where: {
-                    email: signUser.email
+                    email: signUser.login
                 }
             })
 
             if(user) {
                 await prismaClient.user.delete({
                     where: {
-                        email: signUser.email
+                        email: signUser.login
                     }
                 })
             }
@@ -163,7 +163,7 @@ describe("Tests of sign API Route", () => {
 
             // mock de user com senha errada
             const userWrongPassword = {
-                email: "userSignSecondTests@gmail.com",
+                login: "userSignSecondTests@gmail.com",
                 password: "userSignSecondPfhfhassword"
             }
             // fazer login na rota sign
@@ -179,10 +179,10 @@ describe("Tests of sign API Route", () => {
             expect(compare).toBeCalled()
         })
 
-        it("should not be able to create a new user without email", async () => {
+        it("should not be able to log in a user without login", async () => {
             // criar mock de dados do usuário sem email
             const mockUser = {
-                email: "",
+                login: "",
                 password: "123456",
             }
             // realizar a request usando o supertest no servidor 2 vezes com o mesmo nick e emails diferentes
@@ -192,13 +192,13 @@ describe("Tests of sign API Route", () => {
                 .send(mockUser)
     
                 expect(signAttempt.status).toBe(422)
-                expect(signAttempt.body).toEqual({ message:"Email not found on request body"})
+                expect(signAttempt.body).toEqual({ message:"Login not found on request body"})
         })
 
         it("should not be able to create a new user without email", async () => {
             // criar mock de dados do usuário sem email
             const mockUser = {
-                email: "userSignSecondTests@gmail.com",
+                login: "userSignSecondTests@gmail.com",
                 password: "",
             }
             // realizar a request usando o supertest no servidor 2 vezes com o mesmo nick e emails diferentes
