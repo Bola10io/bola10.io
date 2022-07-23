@@ -1,30 +1,22 @@
 import request from "supertest";
 import http, { IncomingMessage, ServerResponse } from "http";
 import { apiResolver }  from "next/dist/server/api-utils/node";
-import signUp from "./signUp";
-import { testHelper } from "../../../lib/testHelper"; //aqui estão os mocks de dados
+import signup from "../signup";
+import { testHelper } from "../../../../lib/testHelper"; //aqui estão os mocks de dados
 import jsonwebtoken, { sign } from "jsonwebtoken";
-import prismaClient from "../../../prisma";
-import { uuid as v4 } from "uuidv4"
+import prismaClient from "../../../../prisma";
+import { User } from "@prisma/client";
 
+const signUpUser = {
+    email: "signUptestgmail.com",
+    password: "123456",
+    nickname: "signUpNick"
+};
 
-
-const returnedUserFromPrisma = {
-        id: v4(),
-        email: "bola10useremail@gmail.com",
-        password: "123456",
-        nickname: "bolinha",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastLogin: new Date(),
-        language: null,
-        displayName: null,
-        name: null,
-        permissions: [],
-        phone: null,
-        pixKey: null,
-        stripeId: null,
-        subscriptionId: null
+interface signUpResponse {
+    token: string;
+    user: User;
+    message: string;
 }
 
 describe("Sign Up API Routes tests", () => {
@@ -37,55 +29,58 @@ describe("Sign Up API Routes tests", () => {
             req,
             res,
             undefined,
-            signUp,
+            signup,
             testHelper.mockApiContext(),
             true
-          );
+            );
         };
-
+        
         server = http.createServer(requestHandler)
     })
 
+    // apagar usuários criados no banco depois de cada teste caso tenham sido criados
+    afterEach(async () => {
+        const user = await prismaClient.user.findFirst({
+            where: {
+                email: signUpUser.email
+            }
+        })
+
+        if(user) {
+            await prismaClient.user.delete({
+                where: {
+                    email: signUpUser.email
+                }
+            })
+        }
+    })
+    
     // fechar o servidor
     afterAll(() => {
         server.close();
     });
 
-    it("should be able to create a new user", async () => {
-        // pegar o mock dos dados do usuário
-        const mockUser = {
-            email: "bola10user@gmail.com",
-            password: "123456",
-            nickname: "bolinha",
-        }
-
+    it("should be able to create a new user and return this user", async () => {
         // realizar a request usando o supertest no servidor iniciado
-        const result = await request
+        await request
             .agent(server)
-            .post("/api/auth/signUp")
-            .send(mockUser)
+            .post("/api/auth/signup")
+            .send(signUpUser)
+            .then((res) => {
+                const responseBody: signUpResponse = res.body
 
-        expect(result.status).toBe(201)
-        expect(result.body).toHaveProperty("token")
+                expect(res.status).toBe(201)
+                expect(responseBody).toHaveProperty("user")
+                expect(responseBody.message).toEqual("sucess created user")
+            })
+
     })
 
     it("should not be able to create a user with email already in use", async () => {
-        // criar mocks de dados do usuário
-        const firstMockUser = {
-            email: "testSameEmail@gmail.com",
-            password: "123456",
-            nickname: "1-nickSameEmailTest",
-        }
-
-        const secondMockUser = {
-            email: "testSameEmail@gmail.com",
-            password: "123456",
-            nickname: "2-nickSameEmailTest",
-        }
 
         // realizar a request usando o supertest no servidor 2 vezes com o mesmo email e nicks diferentes
-        const firstSignUpAttempt = await request.agent(server).post("/api/auth/signUp").send(firstMockUser)
-        const secondSignUpAttempt = await request.agent(server).post("/api/auth/signUp").send(secondMockUser)
+        const firstSignUpAttempt = await request.agent(server).post("/api/auth/signup").send(signUpUser)
+        const secondSignUpAttempt = await request.agent(server).post("/api/auth/signup").send(signUpUser)
 
         expect(secondSignUpAttempt.status).toBe(409)
         expect(secondSignUpAttempt.body).toEqual({ message:"Email already in use"})
@@ -105,11 +100,19 @@ describe("Sign Up API Routes tests", () => {
         }
 
         // realizar a request usando o supertest no servidor 2 vezes com o mesmo nick e emails diferentes
-        const firstSignUpAttempt = await request.agent(server).post("/api/auth/signUp").send(firstMockUser)
-        const secondSignUpAttempt = await request.agent(server).post("/api/auth/signUp").send(secondMockUser)
+        const firstSignUpAttempt = await request.agent(server).post("/api/auth/signup").send(firstMockUser)
+        const secondSignUpAttempt = await request.agent(server).post("/api/auth/signup").send(secondMockUser)
 
+        
         expect(secondSignUpAttempt.status).toBe(409)
         expect(secondSignUpAttempt.body).toEqual({ message:"Nickname already in use"})
+
+        // apagar o usuário criado pro teste
+        await prismaClient.user.delete({
+            where: {
+                email: firstMockUser.email
+            }
+        })
     })
 
     it("should not be able to create a new user without email", async () => {
@@ -123,7 +126,7 @@ describe("Sign Up API Routes tests", () => {
         // realizar a request usando o supertest no servidor 2 vezes com o mesmo nick e emails diferentes
         const signUpAttempt = await request
             .agent(server)
-            .post("/api/auth/signUp")
+            .post("/api/auth/signup")
             .send(mockUser)
 
             expect(signUpAttempt.status).toBe(422)
@@ -141,7 +144,7 @@ describe("Sign Up API Routes tests", () => {
         // realizar a request usando o supertest no servidor 2 vezes com o mesmo nick e emails diferentes
         const signUpAttempt = await request
             .agent(server)
-            .post("/api/auth/signUp")
+            .post("/api/auth/signup")
             .send(mockUser)
 
             expect(signUpAttempt.status).toBe(422)
@@ -159,7 +162,7 @@ describe("Sign Up API Routes tests", () => {
         // realizar a request usando o supertest no servidor 2 vezes com o mesmo nick e emails diferentes
         const signUpAttempt = await request
             .agent(server)
-            .post("/api/auth/signUp")
+            .post("/api/auth/signup")
             .send(mockUser)
 
             expect(signUpAttempt.status).toBe(422)
@@ -167,39 +170,33 @@ describe("Sign Up API Routes tests", () => {
     })
 
 
-    it("shold call jsonwebtoken sign function", async () => {
-        const signUpUser = {
-            email: "calljwtsigntestgmail.com",
-            password: "123456",
-            nickname: "bolinha3"
-        };
-
+    it("shold create a new token and return this token", async () => {
         //mockar a função sign do jsonwebtoken
-        jest.spyOn(jsonwebtoken, "sign")
-              
+        jest.spyOn(jsonwebtoken, "sign").mockImplementation(() => {
+            return "jwt_token"
+        })
         // criar user na rota signup
-        const result = await request.agent(server)
-            .post("/api/auth/signUp")
-            .send(signUpUser)
-        // testar
-        expect(sign).toHaveBeenCalledTimes(1)
-    })
+        await request.agent(server)
+        .post("/")
+        .send(signUpUser)
+        .then((res) => {
+            
+            const responseBody: signUpResponse = res.body
 
-
-    it("shold call prisma.create", async () => {
-        const signUpUser2 = {
-            email: "bola10useremail2@gmail.com",
-            password: "123456",
-            nickname: "bolinhaa"
-        };
-
-        jest.spyOn(prismaClient.user, "create").mockResolvedValue(returnedUserFromPrisma)
-        // criar user na rota signup
-        const result = await request.agent(server)
-            .post("/api/auth/signUp")
-            .send(signUpUser2)
-
-        expect(prismaClient.user.create).toHaveBeenCalledTimes(1)
+            expect(res.status).toEqual(201);
+            expect(responseBody.token).toEqual("jwt_token");
+        })
+        expect(jsonwebtoken.sign).toHaveBeenCalled()
     })
     
+    
+    it("shold call prisma.create", async () => {
+        jest.spyOn(prismaClient.user, "create")
+        // criar user na rota signup
+        await request.agent(server)
+        .post("/")
+        .send(signUpUser)
+        
+        expect(prismaClient.user.create).toHaveBeenCalledTimes(1)
+    })
 })

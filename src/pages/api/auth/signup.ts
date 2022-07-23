@@ -3,8 +3,6 @@ import { genSaltSync, hashSync } from "bcryptjs";
 import { sign } from "jsonwebtoken"
 
 import { NextApiRequest, NextApiResponse } from "next";
-import { User } from "@prisma/client";
-import { textSpanContainsTextSpan } from "typescript";
 
 interface SignUpRequest extends NextApiRequest {
   body: {
@@ -14,9 +12,8 @@ interface SignUpRequest extends NextApiRequest {
   }
 }
 
-
 // post API Route for Login on Bola10.io
-const signUp = async (req: SignUpRequest, res: NextApiResponse) => {
+const signup = async (req: SignUpRequest, res: NextApiResponse) => {
   const { email, password, nickname } = req.body;
 
   // verificar se as informações do body foram enviadas na request
@@ -79,8 +76,16 @@ const signUp = async (req: SignUpRequest, res: NextApiResponse) => {
     }
   )
 
+  // salvar o token no banco
+  await prismaClient.token.create({
+    data: {
+      token: token,
+      userId: user.id,
+    }
+  })
 
-  return res.status(201).json({token, user})
+
+  return res.status(201).json({token, user, message: "sucess created user"})
 };
 
-export default signUp
+export default signup

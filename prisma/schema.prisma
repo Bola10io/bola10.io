@@ -73,7 +73,7 @@ model Token {
   createdAt DateTime @default(now())
   /// Data de expiração do token
   expiresAt DateTime @default(dbgenerated("NOW() + interval '1 day'"))
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model League {
@@ -257,7 +257,6 @@ model RoundGame {
   roundId String
   /// id do jogo
   gameId  String
-
 
   round Round @relation(fields: [roundId], references: [id])
   game  Game  @relation(fields: [gameId], references: [id])
