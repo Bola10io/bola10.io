@@ -10,18 +10,17 @@ import prismaClient from "../../../../prisma";
 import signup from "../signup";
 
 const signUser = {
-    login: "userSignTests@gmail.com",
-    password: "userSignPassword",
+    login: "firstSeedUserSignTests@gmail.com",
+    password: "firstSeedUserSignTest",
 };
 
-const secondUserSeed = {
-    email: "userSignTests@gmail.com",
-    password: "userSignPassword",
-    nickname: "nickSignUser"
-};
+const signUpUser = {
+    email: "firstSeedUserSignTests@gmail.com",
+    password: "firstSeedUserSignTest",
+    nickname: "firstSeedUser"
+}
 
-
-interface signUpResponse {
+interface signResponse {
     token: string;
     user: User;
 }
@@ -65,11 +64,11 @@ describe("Tests of sign API Route", () => {
 
     describe("First seed user", () => {
         beforeEach(async () => {
-            // criar um user seed pra rota de Sign
+            // criar um user seed na rota signUp
             await request
                 .agent(serverSignUp)
                 .post("/")
-                .send(secondUserSeed)
+                .send(signUpUser)
         })
 
         // apagar usuários criados no banco depois de cada teste caso tenham sido
@@ -96,7 +95,7 @@ describe("Tests of sign API Route", () => {
                 .post("/")
                 .send(signUser)
                 .then((res) => {
-                    const responseBody: signUpResponse = res.body
+                    const responseBody: signResponse = res.body
     
                     expect(res.status).toBe(200)
                     expect(responseBody).toHaveProperty("user")
@@ -114,7 +113,7 @@ describe("Tests of sign API Route", () => {
             .post("/")
             .send(signUser)
             .then((res) => {
-                const responseBody: signUpResponse = res.body
+                const responseBody: signResponse = res.body
     
                 expect(res.status).toEqual(200);
                 expect(responseBody.token).toEqual("jwttoken");
@@ -171,7 +170,7 @@ describe("Tests of sign API Route", () => {
             .post("/")
             .send(userWrongPassword)
             .then((res) => {
-                const responseBody: signUpResponse = res.body
+                const responseBody: signResponse = res.body
     
                 expect(res.status).toEqual(403);
                 expect(responseBody).toEqual({ message:"Wrong credentials"})

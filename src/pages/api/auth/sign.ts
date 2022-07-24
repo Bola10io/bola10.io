@@ -25,10 +25,14 @@ const sign = async (req: SignRequest, res: NextApiResponse) => {
         // buscar user no banco
         const user = await prismaClient.user.findFirst({
             where: {
-                OR: {
-                    email: login,
-                    nickname: login,
-                }
+                OR: [
+                    {
+                        email: login,
+                    },
+                    { 
+                        nickname: login 
+                    },
+                  ],
             }
         })
 
